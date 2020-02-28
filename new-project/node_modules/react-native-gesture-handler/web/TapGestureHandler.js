@@ -1,4 +1,4 @@
-import Hammer from '@egjs/hammerjs';
+import Hammer from 'hammerjs';
 
 import DiscreteGestureHandler from './DiscreteGestureHandler';
 import { isnan } from './utils';

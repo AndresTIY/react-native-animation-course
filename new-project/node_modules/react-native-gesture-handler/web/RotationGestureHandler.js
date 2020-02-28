@@ -1,4 +1,4 @@
-import Hammer from '@egjs/hammerjs';
+import Hammer from 'hammerjs';
 
 import { DEG_RAD } from './constants';
 import IndiscreteGestureHandler from './IndiscreteGestureHandler';

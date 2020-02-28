@@ -1,12 +1,11 @@
-import Hammer from '@egjs/hammerjs';
+import Hammer from 'hammerjs';
 
 import {
   MULTI_FINGER_PAN_MAX_PINCH_THRESHOLD,
   MULTI_FINGER_PAN_MAX_ROTATION_THRESHOLD,
 } from './constants';
 import DraggingGestureHandler from './DraggingGestureHandler';
-import { isValidNumber, isnan, TEST_MIN_IF_NOT_NAN, VEC_LEN_SQ } from './utils';
-import State from '../State';
+import { isnan, TEST_MIN_IF_NOT_NAN, VEC_LEN_SQ } from './utils';
 
 class PanGestureHandler extends DraggingGestureHandler {
   get name() {
@@ -22,18 +21,6 @@ class PanGestureHandler extends DraggingGestureHandler {
       ...super.getHammerConfig(),
       direction: this.getDirection(),
     };
-  }
-
-  getState(type) {
-    const nextState = super.getState(type);
-    // Ensure that the first state sent is `BEGAN` and not `ACTIVE`
-    if (
-      this.previousState === State.UNDETERMINED &&
-      nextState === State.ACTIVE
-    ) {
-      return State.BEGAN;
-    }
-    return nextState;
   }
 
   getDirection() {
@@ -52,23 +39,17 @@ class PanGestureHandler extends DraggingGestureHandler {
       return Hammer.DIRECTION_ALL;
     }
 
-    if (!isnan(activeOffsetXStart))
-      horizontalDirections.push(Hammer.DIRECTION_LEFT);
-    if (!isnan(activeOffsetXEnd))
-      horizontalDirections.push(Hammer.DIRECTION_RIGHT);
-    if (horizontalDirections.length === 2)
-      horizontalDirections = [Hammer.DIRECTION_HORIZONTAL];
+    if (!isnan(activeOffsetXStart)) horizontalDirections.push(Hammer.DIRECTION_LEFT);
+    if (!isnan(activeOffsetXEnd)) horizontalDirections.push(Hammer.DIRECTION_RIGHT);
+    if (horizontalDirections.length === 2) horizontalDirections = [Hammer.DIRECTION_HORIZONTAL];
 
     directions = directions.concat(horizontalDirections);
     let verticalDirections = [];
 
-    if (!isnan(activeOffsetYStart))
-      verticalDirections.push(Hammer.DIRECTION_UP);
-    if (!isnan(activeOffsetYEnd))
-      verticalDirections.push(Hammer.DIRECTION_DOWN);
+    if (!isnan(activeOffsetYStart)) verticalDirections.push(Hammer.DIRECTION_UP);
+    if (!isnan(activeOffsetYEnd)) verticalDirections.push(Hammer.DIRECTION_DOWN);
 
-    if (verticalDirections.length === 2)
-      verticalDirections = [Hammer.DIRECTION_VERTICAL];
+    if (verticalDirections.length === 2) verticalDirections = [Hammer.DIRECTION_VERTICAL];
 
     directions = directions.concat(verticalDirections);
 
@@ -101,29 +82,20 @@ class PanGestureHandler extends DraggingGestureHandler {
 
   shouldFailUnderCustomCriteria({ deltaX, deltaY }, criteria) {
     return (
-      (!isnan(criteria.failOffsetXStart) &&
-        deltaX < criteria.failOffsetXStart) ||
+      (!isnan(criteria.failOffsetXStart) && deltaX < criteria.failOffsetXStart) ||
       (!isnan(criteria.failOffsetXEnd) && deltaX > criteria.failOffsetXEnd) ||
-      (!isnan(criteria.failOffsetYStart) &&
-        deltaY < criteria.failOffsetYStart) ||
+      (!isnan(criteria.failOffsetYStart) && deltaY < criteria.failOffsetYStart) ||
       (!isnan(criteria.failOffsetYEnd) && deltaY > criteria.failOffsetYEnd)
     );
   }
 
   shouldActivateUnderCustomCriteria({ deltaX, deltaY, velocity }, criteria) {
     return (
-      (!isnan(criteria.activeOffsetXStart) &&
-        deltaX < criteria.activeOffsetXStart) ||
-      (!isnan(criteria.activeOffsetXEnd) &&
-        deltaX > criteria.activeOffsetXEnd) ||
-      (!isnan(criteria.activeOffsetYStart) &&
-        deltaY < criteria.activeOffsetYStart) ||
-      (!isnan(criteria.activeOffsetYEnd) &&
-        deltaY > criteria.activeOffsetYEnd) ||
-      TEST_MIN_IF_NOT_NAN(
-        VEC_LEN_SQ({ x: deltaX, y: deltaY }),
-        criteria.minDistSq
-      ) ||
+      (!isnan(criteria.activeOffsetXStart) && deltaX < criteria.activeOffsetXStart) ||
+      (!isnan(criteria.activeOffsetXEnd) && deltaX > criteria.activeOffsetXEnd) ||
+      (!isnan(criteria.activeOffsetYStart) && deltaY < criteria.activeOffsetYStart) ||
+      (!isnan(criteria.activeOffsetYEnd) && deltaY > criteria.activeOffsetYEnd) ||
+      TEST_MIN_IF_NOT_NAN(VEC_LEN_SQ({ x: deltaX, y: deltaY }), criteria.minDistSq) ||
       TEST_MIN_IF_NOT_NAN(velocity.x, criteria.minVelocityX) ||
       TEST_MIN_IF_NOT_NAN(velocity.y, criteria.minVelocityY) ||
       TEST_MIN_IF_NOT_NAN(VEC_LEN_SQ(velocity), criteria.minVelocitySq)
@@ -154,14 +126,14 @@ class PanGestureHandler extends DraggingGestureHandler {
 
   updateHasCustomActivationCriteria(criteria) {
     return (
-      isValidNumber(criteria.minDistSq) ||
-      isValidNumber(criteria.minVelocityX) ||
-      isValidNumber(criteria.minVelocityY) ||
-      isValidNumber(criteria.minVelocitySq) ||
-      isValidNumber(criteria.activeOffsetXStart) ||
-      isValidNumber(criteria.activeOffsetXEnd) ||
-      isValidNumber(criteria.activeOffsetYStart) ||
-      isValidNumber(criteria.activeOffsetYEnd)
+      !isnan(criteria.minDistSq) ||
+      !isnan(criteria.minVelocityX) ||
+      !isnan(criteria.minVelocityY) ||
+      !isnan(criteria.minVelocitySq) ||
+      !isnan(criteria.activeOffsetXStart) ||
+      !isnan(criteria.activeOffsetXEnd) ||
+      !isnan(criteria.activeOffsetYStart) ||
+      !isnan(criteria.activeOffsetYEnd)
     );
   }
 

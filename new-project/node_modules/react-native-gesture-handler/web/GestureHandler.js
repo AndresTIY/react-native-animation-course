@@ -1,4 +1,4 @@
-import Hammer from '@egjs/hammerjs';
+import Hammer from 'hammerjs';
 import { findNodeHandle } from 'react-native';
 
 import State from '../State';
@@ -16,7 +16,6 @@ class GestureHandler {
   pendingGestures = {};
   oldState = State.UNDETERMINED;
   previousState = State.UNDETERMINED;
-  lastSentState = null;
 
   get id() {
     return `${this.name}${this._gestureInstance}`;
@@ -76,9 +75,7 @@ class GestureHandler {
     this.clearSelfAsPending();
 
     this.config = ensureConfig({ enabled, ...props });
-    this._hasCustomActivationCriteria = this.updateHasCustomActivationCriteria(
-      this.config
-    );
+    this._hasCustomActivationCriteria = this.updateHasCustomActivationCriteria(this.config);
     if (Array.isArray(this.config.waitFor)) {
       for (const gesture of this.config.waitFor) {
         gesture.addPendingGesture(this);
@@ -103,8 +100,7 @@ class GestureHandler {
 
   isPointInView = ({ x, y }) => {
     const rect = this.view.getBoundingClientRect();
-    const pointerInside =
-      x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+    const pointerInside = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
     return pointerInside;
   };
 
@@ -116,10 +112,7 @@ class GestureHandler {
     const { eventType, maxPointers: numberOfPointers } = event;
     // const direction = DirectionMap[ev.direction];
     const changedTouch = event.changedPointers[0];
-    const pointerInside = this.isPointInView({
-      x: changedTouch.clientX,
-      y: changedTouch.clientY,
-    });
+    const pointerInside = this.isPointInView({ x: changedTouch.clientX, y: changedTouch.clientY });
 
     const state = this.getState(eventType);
     if (state !== this.previousState) {
@@ -154,11 +147,14 @@ class GestureHandler {
 
     const event = this.transformEventData(nativeEvent);
 
-    invokeNullableMethod('onGestureEvent', onGestureEvent, event);
-    if (this.lastSentState !== event.nativeEvent.state) {
-      this.lastSentState = event.nativeEvent.state;
-      invokeNullableMethod('onHandlerStateChange', onHandlerStateChange, event);
+    // Reset the state for the next gesture
+    if (nativeEvent.isFinal) {
+      this.oldState = State.UNDETERMINED;
+      this.previousState = State.UNDETERMINED;
     }
+
+    invokeNullableMethod('onGestureEvent', onGestureEvent, event);
+    invokeNullableMethod('onHandlerStateChange', onHandlerStateChange, event);
   };
 
   cancelPendingGestures(event) {
@@ -220,7 +216,6 @@ class GestureHandler {
 
     this.oldState = State.UNDETERMINED;
     this.previousState = State.UNDETERMINED;
-    this.lastSentState = null;
 
     const { NativeGestureClass } = this;
     const gesture = new NativeGestureClass(this.getHammerConfig());
@@ -256,19 +251,12 @@ class GestureHandler {
   setupEvents() {
     if (!this.isDiscrete) {
       this.hammer.on(`${this.name}start`, event => this.onStart(event));
-      this.hammer.on(`${this.name}end ${this.name}cancel`, event =>
-        this.onGestureEnded(event)
-      );
+      this.hammer.on(`${this.name}end ${this.name}cancel`, event => this.onGestureEnded(event));
     }
     this.hammer.on(this.name, ev => this.onGestureActivated(ev));
   }
 
   onStart({ deltaX, deltaY, rotation }) {
-    // Reset the state for the next gesture
-    this.oldState = State.UNDETERMINED;
-    this.previousState = State.UNDETERMINED;
-    this.lastSentState = null;
-
     this.isGestureRunning = true;
     this.__initialX = deltaX;
     this.__initialY = deltaY;
@@ -295,9 +283,7 @@ class GestureHandler {
 
   getHammerConfig() {
     const pointers =
-      this.config.minPointers === this.config.maxPointers
-        ? this.config.minPointers
-        : 0;
+      this.config.minPointers === this.config.maxPointers ? this.config.minPointers : 0;
     return {
       pointers,
     };
@@ -315,11 +301,7 @@ class GestureHandler {
       }
 
       // Prevent events before the system is ready.
-      if (
-        !inputData ||
-        !recognizer.options ||
-        typeof inputData.maxPointers === 'undefined'
-      ) {
+      if (!inputData || !recognizer.options || typeof inputData.maxPointers === 'undefined') {
         return this.shouldEnableGestureOnSetup;
       }
 
@@ -357,17 +339,11 @@ class GestureHandler {
       }
 
       const deltaRotation =
-        this.initialRotation == null
-          ? 0
-          : inputData.rotation - this.initialRotation;
-      const { success, failed } = this.isGestureEnabledForEvent(
-        this.getConfig(),
-        recognizer,
-        {
-          ...inputData,
-          deltaRotation,
-        }
-      );
+        this.initialRotation == null ? 0 : inputData.rotation - this.initialRotation;
+      const { success, failed } = this.isGestureEnabledForEvent(this.getConfig(), recognizer, {
+        ...inputData,
+        deltaRotation,
+      });
 
       if (failed) {
         this.simulateCancelEvent(inputData);
@@ -390,10 +366,7 @@ function invokeNullableMethod(name, method, event) {
       method(event);
     } else {
       // For use with reanimated's AnimatedEvent
-      if (
-        '__getHandler' in method &&
-        typeof method.__getHandler === 'function'
-      ) {
+      if ('__getHandler' in method && typeof method.__getHandler === 'function') {
         const handler = method.__getHandler();
         invokeNullableMethod(name, handler, event);
       } else {
@@ -401,16 +374,9 @@ function invokeNullableMethod(name, method, event) {
           const { argMapping } = method.__nodeConfig;
           if (Array.isArray(argMapping)) {
             for (const index in argMapping) {
-              const [key, value] = argMapping[index];
+              const [key] = argMapping[index];
               if (key in event.nativeEvent) {
-                const nativeValue = event.nativeEvent[key];
-                if (value && value.setValue) {
-                  // Reanimated API
-                  value.setValue(nativeValue);
-                } else {
-                  // RN Animated API
-                  method.__nodeConfig.argMapping[index] = [key, nativeValue];
-                }
+                method.__nodeConfig.argMapping[index] = [key, event.nativeEvent[key]];
               }
             }
           }
