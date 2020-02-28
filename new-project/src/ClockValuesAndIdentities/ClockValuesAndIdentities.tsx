@@ -75,7 +75,7 @@ export default () => {
         // 3. if animation is over, stop the clock
         cond(eq(progress, 1), stopClock(clock))
       ]),
-    []
+    [show]
   );
 
   return (
